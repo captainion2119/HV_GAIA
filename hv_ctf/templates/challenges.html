@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block body %}
+<h2>Challenges</h2>
+<ul>
+  {% for chal in challenges %}
+    <li><a href="{{ url_for('solve', chal_id=chal.id) }}">{{ chal.name }}</a> ({{ chal.points }})</li>
+  {% endfor %}
+</ul>
+{% endblock %}

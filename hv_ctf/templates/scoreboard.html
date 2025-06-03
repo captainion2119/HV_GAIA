@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block body %}
+<h2>Scoreboard</h2>
+{% if teams %}
+<h3>Teams</h3>
+<ul>
+  {% for team in teams %}
+    <li>Team {{ team.name }}: {{ team.score }}</li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% if users %}
+<h3>Users</h3>
+<ul>
+  {% for user in users %}
+    <li>{{ user.username }}: {{ user.score }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No scores yet</p>
+{% endif %}
+{% endblock %}
