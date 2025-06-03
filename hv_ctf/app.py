@@ -1,29 +1,16 @@
-from flask import Flask, request, redirect, url_for, render_template_string
-from flask_login import (
-    LoginManager,
-    login_user,
-    login_required,
-    current_user,
-)
+from flask import Flask, request, redirect, url_for, render_template
+        return render_template("index.html")
+        return render_template("register.html")
 
-from hv_ctf.models import db, User, Team, Challenge, Solve
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-def create_app(test_config: dict | None = None):
-    """Create and configure the Flask application for the HV CTF platform."""
-    app = Flask(__name__)
-
-    # ── Core config ─────────────────────────────────────────────────────────
-    app.config.update(
-        SECRET_KEY="dev",
-        SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
-    )
-    if test_config:
-        app.config.update(test_config)
-
-    # ── Extensions ─────────────────────────────────────────────────────────
+        return render_template("login.html")
+        return render_template("team_create.html")
+        return render_template(
+            "scoreboard.html",
+            users=users,
+            teams=teams,
+        )
+        return render_template("challenges.html", challenges=challenges)
+        return render_template("solve.html", challenge=challenge)
     db.init_app(app)
     login_manager = LoginManager(app)
 

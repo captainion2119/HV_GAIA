@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>HV CTF</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('index') }}">Home</a>
+    {% if current_user.is_authenticated %}
+      <a href="{{ url_for('challenges') }}">Challenges</a>
+      <a href="{{ url_for('scoreboard') }}">Scoreboard</a>
+    {% endif %}
+  </nav>
+  <hr>
+  {% block body %}{% endblock %}
+</body>
+</html>
