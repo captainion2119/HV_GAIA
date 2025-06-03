@@ -22,6 +22,7 @@ This will start a basic Flask app with SQLite database support. The app includes
 user registration/login, team creation and joining, a simple challenge workflow,
 and a scoreboard that shows both team and individual scores.
 
+
 ## Roadmap
 
 - [ ] Integrate CTFd components or use CTFd as a dependency
