@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block body %}
+  {% if current_user.is_authenticated %}
+    <p>Hello {{ current_user.username }}!</p>
+    <p><a href="{{ url_for('challenges') }}">View Challenges</a></p>
+  {% else %}
+    <p>Welcome to the HV CTF platform.</p>
+    <p><a href="{{ url_for('register') }}">Register</a> or <a href="{{ url_for('login') }}">Login</a></p>
+  {% endif %}
+{% endblock %}

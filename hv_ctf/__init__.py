@@ -1,4 +1,4 @@
 """Base package for HV CTF platform."""
-from .models import db  # re-export for convenience
+from .models import db
 
 __all__ = ["db"]

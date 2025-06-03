@@ -1,3 +1,4 @@
+# hv_ctf/app.py
 from flask import Flask, request, redirect, url_for, render_template_string
 from flask_login import (
     LoginManager,
@@ -36,6 +37,7 @@ def create_app(test_config: dict | None = None):
     def index():
         if current_user.is_authenticated:
             return f"Hello {current_user.username}!"
+        # Minimal landing page
         return "HV CTF platform"
 
     # -- Authentication -----------------------------------------------------
@@ -53,8 +55,9 @@ def create_app(test_config: dict | None = None):
             login_user(user)
             return redirect(url_for("index"))
         return render_template_string(
+            '<h3>Register</h3>'
             '<form method="post">Username: <input name="username"> '
-            'Password: <input name="password" type="password">'
+            'Password: <input name="password" type="password"> '
             '<input type="submit"></form>'
         )
 
@@ -69,8 +72,9 @@ def create_app(test_config: dict | None = None):
             login_user(user)
             return redirect(url_for("index"))
         return render_template_string(
+            '<h3>Login</h3>'
             '<form method="post">Username: <input name="username"> '
-            'Password: <input name="password" type="password">'
+            'Password: <input name="password" type="password"> '
             '<input type="submit"></form>'
         )
 
@@ -89,8 +93,9 @@ def create_app(test_config: dict | None = None):
             db.session.commit()
             return redirect(url_for("scoreboard"))
         return render_template_string(
-            '<form method="post">Team name: <input name="name"><input '
-            "type='submit'></form>"
+            '<h3>Create Team</h3>'
+            '<form method="post">Team name: <input name="name"> '
+            '<input type="submit"></form>'
         )
 
     @app.route("/team/join/<int:team_id>")
@@ -121,7 +126,7 @@ def create_app(test_config: dict | None = None):
             f"({c.points})</li>"
             for c in challenges
         )
-        return f"<ul>{links}</ul>"
+        return f"<h3>Challenges</h3><ul>{links}</ul>"
 
     @app.route("/solve/<int:chal_id>", methods=["GET", "POST"])
     @login_required
@@ -142,8 +147,9 @@ def create_app(test_config: dict | None = None):
                 return redirect(url_for("scoreboard"))
             return "Wrong flag", 400
         return render_template_string(
-            "<form method='post'>Flag: <input name='flag'><input "
-            "type='submit'></form>"
+            f"<h3>Solve: {challenge.name}</h3>"
+            "<form method='post'>Flag: <input name='flag'> "
+            "<input type='submit'></form>"
         )
 
     # -- Plugin system ------------------------------------------------------
