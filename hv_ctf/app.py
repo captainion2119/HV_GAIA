@@ -5,14 +5,16 @@ from flask_login import (
     login_required,
     current_user,
 )
-from hv_ctf.models import db, User, Challenge, Solve
+
+from hv_ctf.models import db, User, Team, Challenge, Solve
 
 
+# ─────────────────────────────────────────────────────────────────────────────
 def create_app(test_config: dict | None = None):
-    """Create a minimal Flask application for the custom CTF platform."""
+    """Create and configure the Flask application for the HV CTF platform."""
     app = Flask(__name__)
 
-    # ── Core config ───────────────────────────────────────────────────────────
+    # ── Core config ─────────────────────────────────────────────────────────
     app.config.update(
         SECRET_KEY="dev",
         SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
@@ -21,7 +23,7 @@ def create_app(test_config: dict | None = None):
     if test_config:
         app.config.update(test_config)
 
-    # ── Extensions ───────────────────────────────────────────────────────────
+    # ── Extensions ─────────────────────────────────────────────────────────
     db.init_app(app)
     login_manager = LoginManager(app)
 
@@ -29,14 +31,14 @@ def create_app(test_config: dict | None = None):
     def load_user(user_id: str):
         return User.query.get(int(user_id))
 
-    # ── Routes ───────────────────────────────────────────────────────────────
+    # ── Routes ─────────────────────────────────────────────────────────────
     @app.route("/")
     def index():
         if current_user.is_authenticated:
             return f"Hello {current_user.username}!"
         return "HV CTF platform"
 
-    # -- Auth ---------------------------------------------------------------
+    # -- Authentication -----------------------------------------------------
     @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
@@ -72,11 +74,42 @@ def create_app(test_config: dict | None = None):
             '<input type="submit"></form>'
         )
 
+    # -- Team management ----------------------------------------------------
+    @app.route("/team/create", methods=["GET", "POST"])
+    @login_required
+    def create_team():
+        if request.method == "POST":
+            name = request.form["name"]
+            if Team.query.filter_by(name=name).first():
+                return "Team exists", 400
+            team = Team(name=name)
+            db.session.add(team)
+            db.session.commit()
+            current_user.team = team
+            db.session.commit()
+            return redirect(url_for("scoreboard"))
+        return render_template_string(
+            '<form method="post">Team name: <input name="name"><input '
+            "type='submit'></form>"
+        )
+
+    @app.route("/team/join/<int:team_id>")
+    @login_required
+    def join_team(team_id: int):
+        team = Team.query.get_or_404(team_id)
+        current_user.team = team
+        db.session.commit()
+        return redirect(url_for("scoreboard"))
+
     # -- Scoreboard & Challenges -------------------------------------------
     @app.route("/scoreboard")
     def scoreboard():
         users = User.query.order_by(User.score.desc()).all()
-        output = "\n".join(f"{u.username}: {u.score}" for u in users)
+        teams = Team.query.order_by(Team.score.desc()).all()
+
+        team_lines = "\n".join(f"Team {t.name}: {t.score}" for t in teams)
+        user_lines = "\n".join(f"{u.username}: {u.score}" for u in users)
+        output = "\n".join(filter(None, [team_lines, user_lines]))
         return output or "No scores yet"
 
     @app.route("/challenges")
@@ -96,11 +129,14 @@ def create_app(test_config: dict | None = None):
         challenge = Challenge.query.get_or_404(chal_id)
         if request.method == "POST":
             if request.form["flag"] == challenge.flag:
+                # Avoid duplicate solves
                 if not Solve.query.filter_by(
                     user_id=current_user.id, challenge_id=chal_id
                 ).first():
                     solve = Solve(user_id=current_user.id, challenge_id=chal_id)
                     current_user.score += challenge.points
+                    if current_user.team:
+                        current_user.team.score += challenge.points
                     db.session.add(solve)
                     db.session.commit()
                 return redirect(url_for("scoreboard"))
@@ -110,20 +146,20 @@ def create_app(test_config: dict | None = None):
             "type='submit'></form>"
         )
 
-    # ── Plugin system (blueprints) ──────────────────────────────────────────
+    # -- Plugin system ------------------------------------------------------
     try:
         from hv_ctf.plugins.simple_scoreboard import bp as scoreboard_bp
-
         app.register_blueprint(scoreboard_bp)
     except Exception as exc:  # pragma: no cover
         app.logger.debug("Plugin failed: %s", exc)
 
-    # ── DB bootstrap ────────────────────────────────────────────────────────
+    # -- DB bootstrap -------------------------------------------------------
     with app.app_context():
         db.create_all()
 
     return app
 
 
+# ── Entrypoint ──────────────────────────────────────────────────────────────
 if __name__ == "__main__":  # pragma: no cover
     create_app().run(debug=True)
