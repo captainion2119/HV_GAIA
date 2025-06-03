@@ -1,5 +1,4 @@
-"""Example plugin for customizing the scoreboard."""
-
+"""Example plugin demonstrating a custom scoreboard route."""
 from flask import Blueprint
 
 bp = Blueprint("simple_scoreboard", __name__)
@@ -7,5 +6,5 @@ bp = Blueprint("simple_scoreboard", __name__)
 
 @bp.route("/scoreboard")
 def custom_scoreboard():
-    # Example scoreboard output
+    # A simple alternative output; replace or extend as desired.
     return "Custom scoreboard from plugin"
