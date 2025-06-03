@@ -1,12 +1,21 @@
-from flask import Flask, request, redirect, url_for, render_template
-from flask_login import LoginManager, login_user, login_required, current_user
-from hv_ctf.models import db, User, Challenge, Solve, Team
+# hv_ctf/app.py
+from flask import Flask, request, redirect, url_for, render_template_string
+from flask_login import (
+    LoginManager,
+    login_user,
+    login_required,
+    current_user,
+)
+
+from hv_ctf.models import db, User, Team, Challenge, Solve
 
 
+# ─────────────────────────────────────────────────────────────────────────────
 def create_app(test_config: dict | None = None):
-    """Create a minimal Flask application for the custom CTF platform."""
+    """Create and configure the Flask application for the HV CTF platform."""
     app = Flask(__name__)
 
+    # ── Core config ─────────────────────────────────────────────────────────
     app.config.update(
         SECRET_KEY="dev",
         SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
@@ -15,6 +24,7 @@ def create_app(test_config: dict | None = None):
     if test_config:
         app.config.update(test_config)
 
+    # ── Extensions ─────────────────────────────────────────────────────────
     db.init_app(app)
     login_manager = LoginManager(app)
 
@@ -22,10 +32,15 @@ def create_app(test_config: dict | None = None):
     def load_user(user_id: str):
         return User.query.get(int(user_id))
 
+    # ── Routes ─────────────────────────────────────────────────────────────
     @app.route("/")
     def index():
-        return render_template("index.html")
+        if current_user.is_authenticated:
+            return f"Hello {current_user.username}!"
+        # Minimal landing page
+        return "HV CTF platform"
 
+    # -- Authentication -----------------------------------------------------
     @app.route("/register", methods=["GET", "POST"])
     def register():
         if request.method == "POST":
@@ -39,7 +54,12 @@ def create_app(test_config: dict | None = None):
             db.session.commit()
             login_user(user)
             return redirect(url_for("index"))
-        return render_template("register.html")
+        return render_template_string(
+            '<h3>Register</h3>'
+            '<form method="post">Username: <input name="username"> '
+            'Password: <input name="password" type="password"> '
+            '<input type="submit"></form>'
+        )
 
     @app.route("/login", methods=["GET", "POST"])
     def login():
@@ -51,8 +71,14 @@ def create_app(test_config: dict | None = None):
                 return "Invalid credentials", 400
             login_user(user)
             return redirect(url_for("index"))
-        return render_template("login.html")
+        return render_template_string(
+            '<h3>Login</h3>'
+            '<form method="post">Username: <input name="username"> '
+            'Password: <input name="password" type="password"> '
+            '<input type="submit"></form>'
+        )
 
+    # -- Team management ----------------------------------------------------
     @app.route("/team/create", methods=["GET", "POST"])
     @login_required
     def create_team():
@@ -66,7 +92,11 @@ def create_app(test_config: dict | None = None):
             current_user.team = team
             db.session.commit()
             return redirect(url_for("scoreboard"))
-        return render_template("team_create.html")
+        return render_template_string(
+            '<h3>Create Team</h3>'
+            '<form method="post">Team name: <input name="name"> '
+            '<input type="submit"></form>'
+        )
 
     @app.route("/team/join/<int:team_id>")
     @login_required
@@ -76,21 +106,27 @@ def create_app(test_config: dict | None = None):
         db.session.commit()
         return redirect(url_for("scoreboard"))
 
+    # -- Scoreboard & Challenges -------------------------------------------
     @app.route("/scoreboard")
     def scoreboard():
         users = User.query.order_by(User.score.desc()).all()
         teams = Team.query.order_by(Team.score.desc()).all()
-        return render_template(
-            "scoreboard.html",
-            users=users,
-            teams=teams,
-        )
+
+        team_lines = "\n".join(f"Team {t.name}: {t.score}" for t in teams)
+        user_lines = "\n".join(f"{u.username}: {u.score}" for u in users)
+        output = "\n".join(filter(None, [team_lines, user_lines]))
+        return output or "No scores yet"
 
     @app.route("/challenges")
     @login_required
     def challenges():
         challenges = Challenge.query.all()
-        return render_template("challenges.html", challenges=challenges)
+        links = "".join(
+            f"<li><a href='{url_for('solve', chal_id=c.id)}'>{c.name}</a> "
+            f"({c.points})</li>"
+            for c in challenges
+        )
+        return f"<h3>Challenges</h3><ul>{links}</ul>"
 
     @app.route("/solve/<int:chal_id>", methods=["GET", "POST"])
     @login_required
@@ -98,6 +134,7 @@ def create_app(test_config: dict | None = None):
         challenge = Challenge.query.get_or_404(chal_id)
         if request.method == "POST":
             if request.form["flag"] == challenge.flag:
+                # Avoid duplicate solves
                 if not Solve.query.filter_by(
                     user_id=current_user.id, challenge_id=chal_id
                 ).first():
@@ -109,23 +146,26 @@ def create_app(test_config: dict | None = None):
                     db.session.commit()
                 return redirect(url_for("scoreboard"))
             return "Wrong flag", 400
-        return render_template("solve.html", challenge=challenge)
+        return render_template_string(
+            f"<h3>Solve: {challenge.name}</h3>"
+            "<form method='post'>Flag: <input name='flag'> "
+            "<input type='submit'></form>"
+        )
 
-    with app.app_context():
-        db.create_all()
-
-    # Register example plugins
+    # -- Plugin system ------------------------------------------------------
     try:
         from hv_ctf.plugins.simple_scoreboard import bp as scoreboard_bp
-
         app.register_blueprint(scoreboard_bp)
-    except Exception as exc:
-        # Plugin import failed
+    except Exception as exc:  # pragma: no cover
         app.logger.debug("Plugin failed: %s", exc)
+
+    # -- DB bootstrap -------------------------------------------------------
+    with app.app_context():
+        db.create_all()
 
     return app
 
 
-if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True)
+# ── Entrypoint ──────────────────────────────────────────────────────────────
+if __name__ == "__main__":  # pragma: no cover
+    create_app().run(debug=True)

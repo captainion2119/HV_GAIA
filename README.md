@@ -18,6 +18,7 @@ pip install -r requirements.txt
 python -m hv_ctf.app
 ```
 
+
 This will start a basic Flask app with SQLite database support. The app now
 renders HTML templates for registration, login, challenges, and the scoreboard.
 Users can create and join teams, solve challenges, and view scores for both
