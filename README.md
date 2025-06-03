@@ -18,12 +18,13 @@ pip install -r requirements.txt
 python -m hv_ctf.app
 ```
 
-This will start a basic Flask app that can be extended with additional routes and logic.
+This will start a basic Flask app with SQLite database support. The app includes
+user registration/login, a simple challenge workflow, and a scoreboard.
 
 ## Roadmap
 
 - [ ] Integrate CTFd components or use CTFd as a dependency
-- [ ] Add user authentication and team management
-- [ ] Implement challenge creation and solving workflow
-- [ ] Build a scoreboard with dynamic scoring
+- [x] Add user authentication and team management
+- [x] Implement challenge creation and solving workflow
+- [x] Build a scoreboard with dynamic scoring
 - [ ] Support plugins and custom challenge types
